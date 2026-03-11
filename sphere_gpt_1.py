@@ -312,7 +312,9 @@ def main():
     plt.title(f"Geometric-optics phase function (slice model), m={m}, x={x:g}")
     plt.grid(True, alpha=0.3)
     plt.tight_layout()
+    plt.savefig('[GPT]sphere_phase_function.png')
     plt.show()
+    
 
     # Plot DoLP
     plt.figure(figsize=(8, 5))
@@ -323,10 +325,12 @@ def main():
     plt.ylim(-1.05, 1.05)
     plt.grid(True, alpha=0.3)
     plt.tight_layout()
+    plt.savefig('[GPT]sphere_DOLP.png')
     plt.show()
 
+
     # Optional: order-resolved phase contributions
-    plt.figure(figsize=(8, 5))
+"""     plt.figure(figsize=(8, 5))
     for order in sorted(order_hist.keys()):
         if order <= 4:  # show first few orders clearly
             plt.semilogy(theta_deg, order_hist[order] + 1e-30, label=f"p={order}")
@@ -336,7 +340,8 @@ def main():
     plt.grid(True, alpha=0.3)
     plt.legend()
     plt.tight_layout()
-    plt.show()
+    plt.show() """
+
 
 if __name__ == "__main__":
     main()

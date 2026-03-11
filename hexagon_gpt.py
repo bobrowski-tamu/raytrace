@@ -384,7 +384,7 @@ def plot_results(result):
     plt.yscale("log")
     plt.grid(True)
     plt.tight_layout()
-
+    plt.savefig('[GPT]hexagon_phase_function.png')
     plt.show()
 
 
@@ -403,7 +403,7 @@ if __name__ == "__main__":
     plot_results(result)
 
     # optional save
-    np.savetxt(
+"""     np.savetxt(
         "phase_azimuth.txt",
         np.column_stack([result["azimuth_centers_deg"], result["phase_azimuth"]]),
         header="azimuth_deg phase_function"
@@ -413,4 +413,4 @@ if __name__ == "__main__":
         "phase_scattering_angle.txt",
         np.column_stack([result["scatter_centers_deg"], result["phase_scatter"]]),
         header="scattering_angle_deg phase_function"
-    )
+    ) """
