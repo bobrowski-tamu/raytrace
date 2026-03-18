@@ -203,7 +203,7 @@ if __name__ == "__main__":
     result = simulate(
         a=1.0,
         n_ice=1.31,
-        n_rays=600,
+        n_rays=500,
         dtheta_deg=1.0,
         max_hits=15,
         cutoff=1e-7,

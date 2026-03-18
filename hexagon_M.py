@@ -2,25 +2,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 m = 1.31
-n_rays = 1000
-dtheta = 1.0
-n_interact = 10
-a = 1
-
-def hexagon_vertices(a):
-    angles = np.deg2rad(np.arange(0.0, 360.0, 60.0))
-    return np.column_stack((a * np.cos(angles), a * np.sin(angles)))
-
-def hexagon_edges(a):
-    v = hexagon_vertices(a)
-    edges = []
-
-    for i in range(len(v)):
-        p1 = v[i]
-        p2 = v[(i + 1) % len(v)]   # wraps last vertex back to first
-        edges.append((p1, p2))
-
-    return edges
+N_ICE = m
+HEX_RADIUS = 1.0
+N_HITS = 4
+FOLLOW_INTERNAL_REFLECTIONS = True
 
 
 def normalize(v):
@@ -32,6 +17,11 @@ def normalize(v):
 
 def cross2(a, b):
     return a[0] * b[1] - a[1] * b[0]
+
+
+def hexagon_vertices(radius):
+    angles = np.deg2rad(np.arange(0.0, 360.0, 60.0))
+    return np.column_stack((radius * np.cos(angles), radius * np.sin(angles)))
 
 
 def outward_normal(p1, p2):
@@ -91,13 +81,13 @@ def ray_segment_intersection(ray_origin, ray_dir, p1, p2, eps=1e-12):
     return None
 
 
-def first_hit(ray_origin, ray_dir, vertices):
+def ray_polygon_hit(ray_origin, ray_dir, polygon_vertices):
     best_t = np.inf
     best = None
 
-    for i in range(len(vertices)):
-        p1 = vertices[i]
-        p2 = vertices[(i + 1) % len(vertices)]
+    for i in range(len(polygon_vertices)):
+        p1 = polygon_vertices[i]
+        p2 = polygon_vertices[(i + 1) % len(polygon_vertices)]
         hit = ray_segment_intersection(ray_origin, ray_dir, p1, p2)
         if hit is None:
             continue
@@ -105,111 +95,146 @@ def first_hit(ray_origin, ray_dir, vertices):
         if t < best_t:
             best_t = t
             best = {
+                "distance": t,
+                "edge_index": i,
                 "point": ray_origin + t * ray_dir,
                 "normal_out": outward_normal(p1, p2),
             }
 
     return best
 
-vertices = hexagon_vertices(a)
 
-plt.figure()
+def orient_normal_toward_incoming(normal, incoming_dir):
+    n = normal.copy()
+    if np.dot(n, incoming_dir) > 0.0:
+        n = -n
+    return n
 
-# Close the hexagon by appending the first vertex at the end
-vertices_closed = np.vstack([vertices, vertices[0]])
 
-# Plot the hexagon outline
-plt.plot(vertices_closed[:, 0], vertices_closed[:, 1], 'b-', linewidth=2)
+def plot_segment(p0, p1, color, label=None, lw=2):
+    plt.plot([p0[0], p1[0]], [p0[1], p1[1]], color=color, linewidth=lw, label=label)
 
-# Incident ray: from the left, traveling to the right (+x).
-# (Its wavefront is parallel to y-axis.)
-ray_origin = np.array([-2.0, 0.5])
-ray_dir = normalize(np.array([1.0, 0.0]))
 
-hit = first_hit(ray_origin, ray_dir, vertices)
-if hit is None:
-    raise RuntimeError("Ray did not hit the hexagon.")
+def main():
+    vertices = hexagon_vertices(HEX_RADIUS)
+    vertices_closed = np.vstack([vertices, vertices[0]])
 
-p_hit = hit["point"]
-n_out = hit["normal_out"]
+    plt.figure(figsize=(7, 7))
+    plt.plot(vertices_closed[:, 0], vertices_closed[:, 1], 'b-', linewidth=2, label='Hexagon')
 
-# For air -> ice, interface normal points into the crystal.
-n_if = -n_out
-if np.dot(n_if, ray_dir) > 0.0:
-    n_if = -n_if
+    # Incident ray from the left, traveling in +x (wavefront parallel to y-axis).
+    ray_pos = np.array([-2.0, 0.5])
+    ray_dir = normalize(np.array([1.0, 0.0]))
+    inside_ice = False
+    hit_points = []
 
-ray_ref = reflect(ray_dir, n_if)
-ray_tr = refract(ray_dir, n_if, 1.0, m)
-R1, T1 = fresnel_unpolarized(ray_dir, n_if, 1.0, m)
+    # Track one branch for readability: at each hit, show both split rays,
+    # then continue tracing the transmitted branch.
+    for hit_idx in range(1, N_HITS + 1):
+        hit = ray_polygon_hit(ray_pos, ray_dir, vertices)
+        if hit is None:
+            break
 
-# Draw incident ray segment up to intersection point
-plt.plot([ray_origin[0], p_hit[0]], [ray_origin[1], p_hit[1]], color='orange', linewidth=2, label='Incident')
+        p_hit = hit['point']
+        n_out = hit['normal_out']
+        hit_points.append(p_hit.copy())
 
-# Draw reflected ray
-L_ref = 1.6
-ref_end = p_hit + L_ref * ray_ref
-plt.plot([p_hit[0], ref_end[0]], [p_hit[1], ref_end[1]], color='red', linewidth=2, label=f'Reflected R={R1:.2f}')
+        if inside_ice:
+            n1, n2 = N_ICE, 1.0
+            n_if = n_out
+        else:
+            n1, n2 = 1.0, N_ICE
+            n_if = -n_out
 
-# Draw refracted ray (Snell)
-if ray_tr is not None:
-    # Trace inside-ice ray to next boundary.
-    eps_shift = 1e-9
-    hit2 = first_hit(p_hit + eps_shift * ray_tr, ray_tr, vertices)
-    if hit2 is not None:
-        p_hit2 = hit2["point"]
+        n_if = orient_normal_toward_incoming(n_if, ray_dir)
+        R, T = fresnel_unpolarized(ray_dir, n_if, n1, n2)
+        d_ref = reflect(ray_dir, n_if)
+        d_tr = refract(ray_dir, n_if, n1, n2)
 
-        # Inside segment from first to second boundary.
-        plt.plot([p_hit[0], p_hit2[0]], [p_hit[1], p_hit2[1]], color='green', linewidth=2, label=f'Transmitted in ice T={T1:.2f}')
+        # Draw incoming segment up to this hit.
+        color_in = 'orange' if hit_idx == 1 else 'green'
+        label_in = 'Incident' if hit_idx == 1 else f'Path to hit {hit_idx}'
+        plot_segment(ray_pos, p_hit, color=color_in, label=label_in)
 
-        n_out2 = hit2["normal_out"]
-        n_if2 = n_out2.copy()  # ice -> air normal
-        if np.dot(n_if2, ray_tr) > 0.0:
-            n_if2 = -n_if2
-
-        ray_ref2 = reflect(ray_tr, n_if2)
-        ray_tr2 = refract(ray_tr, n_if2, m, 1.0)
-        R2, T2 = fresnel_unpolarized(ray_tr, n_if2, m, 1.0)
-
-        # Reflected branch at second boundary (stays inside ice)
-        L_ref2 = 1.1
-        ref2_end = p_hit2 + L_ref2 * ray_ref2
-        plt.plot(
-            [p_hit2[0], ref2_end[0]],
-            [p_hit2[1], ref2_end[1]],
-            color='magenta',
-            linewidth=2,
-            label=f'Second reflected (ice) R={R2:.2f}'
+        # Draw local reflected branch.
+        plot_segment(
+            p_hit,
+            p_hit + 0.8 * d_ref,
+            color='red',
+            label=f'Reflected at hit {hit_idx}, R={R:.2f}'
         )
 
-        # Transmitted branch at second boundary (exits to air)
-        if ray_tr2 is not None:
-            L_tr2 = 1.6
-            tr2_end = p_hit2 + L_tr2 * ray_tr2
-            plt.plot(
-                [p_hit2[0], tr2_end[0]],
-                [p_hit2[1], tr2_end[1]],
-                color='cyan',
-                linewidth=2,
-                label=f'Second transmitted (air) T={T2:.2f}'
+        # Draw interface normal at hit.
+        plot_segment(
+            p_hit,
+            p_hit + 0.25 * n_if,
+            color='black',
+            label=f'Normal at hit {hit_idx}',
+            lw=1.2,
+        )
+
+        # Draw a short transmitted direction marker.
+        tr_color = 'cyan' if inside_ice else 'green'
+        if d_tr is not None:
+            plot_segment(
+                p_hit,
+                p_hit + 0.8 * d_tr,
+                color=tr_color,
+                label=f'Transmitted at hit {hit_idx}, T={T:.2f}'
             )
+
+        # Choose which branch to continue tracing.
+        if d_tr is None:
+            # Total internal reflection: only reflected branch exists.
+            ray_pos = p_hit + 1e-9 * d_ref
+            ray_dir = d_ref
+            continue
+
+        if FOLLOW_INTERNAL_REFLECTIONS and inside_ice:
+            # Keep the main path inside the crystal to generate many hits.
+            ray_pos = p_hit + 1e-9 * d_ref
+            ray_dir = d_ref
+            inside_ice = True
         else:
-            plt.scatter([p_hit2[0]], [p_hit2[1]], color='cyan', s=40, label='Total internal reflection')
-    else:
-        L_tr = 1.1
-        tr_end = p_hit + L_tr * ray_tr
-        plt.plot([p_hit[0], tr_end[0]], [p_hit[1], tr_end[1]], color='green', linewidth=2, label=f'Transmitted in ice T={T1:.2f}')
+            # Default: follow transmitted branch.
+            ray_pos = p_hit + 1e-9 * d_tr
+            ray_dir = d_tr
+            inside_ice = not inside_ice
 
-# Draw surface normal at hit point
-L_n = 0.35
-normal_end = p_hit + L_n * n_if
-plt.plot([p_hit[0], normal_end[0]], [p_hit[1], normal_end[1]], 'k--', linewidth=1.5, label='Interface normal')
+    # Plot all hit points found (up to N_HITS), with colors tied to N_HITS.
+    if hit_points:
+        cmap_colors = plt.cm.viridis(np.linspace(0.15, 0.95, N_HITS))
+        for i, p in enumerate(hit_points):
+            color_i = cmap_colors[min(i, N_HITS - 1)]
+            plt.scatter(
+                p[0],
+                p[1],
+                s=60,
+                color=color_i,
+                edgecolor='white',
+                linewidth=0.8,
+                zorder=6,
+                label='Hit points' if i == 0 else None,
+            )
+            plt.text(
+                p[0] + 0.03,
+                p[1] + 0.03,
+                f'{i + 1}',
+                fontsize=8,
+                color='black',
+                zorder=7,
+            )
 
-plt.xlim(-1.5, 1.5)
-plt.ylim(-1.5, 1.5)
-plt.axhline(0)
-plt.axvline(0)
-plt.grid()
-plt.gca().set_aspect('equal')
-plt.legend()
+    plt.xlim(-1.5, 1.5)
+    plt.ylim(-1.5, 1.5)
+    plt.axhline(0, color='0.5', linewidth=1)
+    plt.axvline(0, color='0.5', linewidth=1)
+    plt.gca().set_aspect('equal')
+    plt.grid(True)
+    plt.legend(loc='upper left', fontsize=8)
+    plt.title(f'Ray Splitting and Hits (N_HITS={N_HITS}, found={len(hit_points)})')
+    plt.show()
 
-plt.show()
+
+if __name__ == '__main__':
+    main()
