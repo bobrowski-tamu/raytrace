@@ -233,7 +233,7 @@ def main():
     )
 
     theta_deg = np.degrees(theta)
-
+    '''
     # Save results
     data = np.column_stack([theta_deg, phase, dolp])
     np.savetxt(
@@ -242,6 +242,7 @@ def main():
         header="theta_deg   phase_function   DoLP",
         fmt="%.8e"
     )
+    '''
 
     # Plot phase function
     plt.figure(figsize=(8, 5))
@@ -251,18 +252,18 @@ def main():
     plt.title(f"Geometric-optics sphere phase function, m={m}, x={x:g}")
     plt.grid(True, alpha=0.3)
     plt.tight_layout()
+    plt.savefig('[GPT]sphere_phase_function.png')
 
     # Plot DoLP
     plt.figure(figsize=(8, 5))
     plt.plot(theta_deg, dolp)
     plt.xlabel("Scattering angle (deg)")
-    \
     plt.ylabel("Degree of linear polarization")
     plt.title(f"DoLP for sphere, m={m}, x={x:g}")
     plt.ylim(-1.05, 1.05)
     plt.grid(True, alpha=0.3)
     plt.tight_layout()
-
+    plt.savefig('[GPT]sphere_DOLP.png')
     plt.show()
 
 if __name__ == "__main__":
