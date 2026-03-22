@@ -1,6 +1,20 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.special import j1 as bessel_j1
+
+# ============================================================
+# Geometric-optics scattering by a large sphere
+# Computes:
+#   - phase function P(theta)
+#   - degree of linear polarization DoLP(theta)
+#
+# Model:
+#   - 3D sphere, but rays traced in 2D meridional plane
+#   - correct 3D weighting by annular area on projected disk
+#   - includes:
+#       p=0   external reflection
+#       p>=1  transmission with internal reflections
+#   - no diffraction/interference
+# ============================================================
 
 def normalize(v):
     v = np.asarray(v, dtype=float)
@@ -39,7 +53,7 @@ def refract(k, n, n1, n2):
 
 def fresnel_coefficients(n1, n2, cos_i):
     """
-    Fresnel coefficients for s and p polarization.
+    Fresnel power coefficients for s and p polarization.
     Returns Rs, Rp, Ts, Tp
     """
     cos_i = abs(np.clip(cos_i, -1.0, 1.0))
@@ -91,7 +105,9 @@ def next_sphere_intersection(P, k, radius=1.0, eps=1e-10):
 def trace_one_ray(b, m=1.33, p_max=8):
     """
     Trace one ray with impact parameter b (0 <= b < 1).
-    Returns [(theta, Is, Ip), ...]
+
+    Returns list of contributions:
+        [(theta, Is, Ip), ...]
     """
     if not (0.0 <= b < 1.0):
         return []
@@ -157,33 +173,10 @@ def trace_one_ray(b, m=1.33, p_max=8):
 
     return contributions
 
-def compute_diffraction_phase(theta, x=500.0, n_bins=720):
-    """
-    Compute diffractrion
-    """
-    # Handle theta = 0 specially (avoid division by zero)
-    phase_diff = np.zeros_like(theta)
-    
-    # Compute only for non-zero sin(theta)
-    mask = np.sin(theta) > 1e-12
-    sin_theta = np.sin(theta[mask])
-    arg = x * sin_theta
-    
-    # Compute diffraction term
-    bessel_term = 2.0 * bessel_j1(arg) / arg
-    phase_diff[mask] = (bessel_term**2) * (1.0 + np.cos(theta[mask]))**2
-    
-    # Normalize: integral P(theta) dOmega = 1
-    dtheta = theta[1] - theta[0]
-    norm = np.sum(phase_diff * 2.0 * np.pi * np.sin(theta) * dtheta)
-    if norm > 0:
-        phase_diff /= norm
-    
-    return phase_diff
-
-def compute_phase_and_dolp(m=1.33, n_rays=50000, n_bins=720, p_max=8):
+def compute_phase_and_dolp(m=1.33, x=500.0, n_rays=50000, n_bins=720, p_max=8):
     """
     Computes phase function and DoLP for a sphere.
+    x is included to document large-particle regime, but GO result depends on m.
     """
     # Sample impact parameter over projected disk radius
     b_vals = np.linspace(0.0, 0.999999, n_rays)
@@ -227,48 +220,51 @@ def compute_phase_and_dolp(m=1.33, n_rays=50000, n_bins=720, p_max=8):
 
     return centers, phase, dolp
 
-def combine_phase_functions(phase_geo, phase_diff):
-    """
-    Combines geometric optics and diffraction phase functions.
-    """
-    phase_combined = 0.5 * phase_geo + 0.5 * phase_diff
-    return phase_combined
+def main():
+    m = 1.33
+    x = 500.0
 
-theta, phase, dolp = compute_phase_and_dolp(
-    m=1.33,
-    n_rays=50000,
-    n_bins=720,
-    p_max=15
-)
+    theta, phase, dolp = compute_phase_and_dolp(
+        m=m,
+        x=x,
+        n_rays=50000,
+        n_bins=720,
+        p_max=8
+    )
 
-# Compute diffraction phase function
-x = 500.0
-phase_diff = compute_diffraction_phase(theta, x=x, n_bins=720)
+    theta_deg = np.degrees(theta)
+    '''
+    # Save results
+    data = np.column_stack([theta_deg, phase, dolp])
+    np.savetxt(
+        "sphere_phase_dolp.txt",
+        data,
+        header="theta_deg   phase_function   DoLP",
+        fmt="%.8e"
+    )
+    '''
 
-# Combine phase functions: 50% geometric optics + 50% diffraction
-phase_combined = combine_phase_functions(phase, phase_diff)
+    # Plot phase function
+    plt.figure(figsize=(8, 5))
+    plt.semilogy(theta_deg, phase + 1e-30)
+    plt.xlabel("Scattering angle (deg)")
+    plt.ylabel("Phase function P(theta)")
+    plt.title(f"Geometric-optics sphere phase function, m={m}, x={x:g}")
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
+    plt.savefig('[GPT]sphere_phase_function.png')
 
-theta_deg = np.degrees(theta)
+    # Plot DoLP
+    plt.figure(figsize=(8, 5))
+    plt.plot(theta_deg, dolp)
+    plt.xlabel("Scattering angle (deg)")
+    plt.ylabel("Degree of linear polarization")
+    plt.title(f"DoLP for sphere, m={m}, x={x:g}")
+    plt.ylim(-1.05, 1.05)
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
+    plt.savefig('[GPT]sphere_DOLP.png')
+    plt.show()
 
-# Plot DoLP
-plt.figure(figsize=(8, 5))
-plt.plot(theta_deg, dolp)
-plt.xlabel("Scattering angle (deg)")
-plt.ylabel("Degree of linear polarization (DOLP)")
-plt.title(f"DoLP for sphere (geometric optics), m=1.33, x={x:.0f}")
-plt.ylim(-1.05, 1.05)
-plt.grid(True, alpha=0.3)
-plt.tight_layout()
-plt.savefig('sphere_DOLP.png', dpi=150)
-
-# Plot geometric optics phase alone
-plt.figure(figsize=(8, 5))
-plt.semilogy(theta_deg, phase + 1e-30, 'b-', linewidth=2)
-plt.xlabel("Scattering angle (deg)")
-plt.ylabel("Phase function P(theta)")
-plt.title(f"Sphere phase function (geometric optics), m=1.33, x={x:.0f}")
-plt.grid(True, alpha=0.3)
-plt.tight_layout()
-plt.savefig('sphere_phase_function.png', dpi=150)
-
-plt.show()
+if __name__ == "__main__":
+    main()
