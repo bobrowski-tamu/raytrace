@@ -2,7 +2,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # ============================================================
-#*This version is no where close to the correct phase function*
 #  Geometric-Optics Phase Function for a 2D Hexagonal Ice Crystal
 #  - Unpolarized incident light
 #  - Refractive index of ice: m = 1.31
@@ -45,7 +44,7 @@ def build_sides(verts):
         e = p2 - p1
         t_hat = e / np.linalg.norm(e)
         # outward normal (choose clockwise orientation)
-        n_out = np.array([t_hat[1], -t_hat[0]])
+        n_out = np.array([-t_hat[1], t_hat[0]])
         n_out /= np.linalg.norm(n_out)
         sides.append((p1, p2, n_out))
     return sides
@@ -126,8 +125,12 @@ def refract(v_in, n, n1, n2):
       - R, T: Fresnel reflection and transmission coefficients (unpolarized)
     """
     # cos θi between incoming ray and normal (both pointing into interface from medium 1)
-    cos_theta_i = np.dot(v_in, n)
-    cos_theta_i = np.clip(cos_theta_i, 0.0, 1.0)
+    cos_theta_i = -np.dot(v_in, n)      # note minus sign: angle between -v_in and n
+    cos_theta_i = np.clip(cos_theta_i, -1.0, 1.0)
+    if cos_theta_i < 0:
+        # Ray is coming from the other side; flip normal and cos
+        n = -n
+        cos_theta_i = -cos_theta_i
 
     R, T = fresnel_unpolarized(cos_theta_i, n1, n2)
 
@@ -227,25 +230,18 @@ def trace_one_orientation(sides_rot, v_in, ray_start, max_depth=6, weight_cut=1e
 # 6. Monte Carlo over orientations and build phase function
 # ------------------------------------------------------------
 # Incident direction (in air)
-theta_inc = 0.0  # zenith incidence for symmetric halos
+theta_inc = np.deg2rad(-20.0)  # choose a solar-zenith-like angle (from +x axis)
 v_in = np.array([np.cos(theta_inc), np.sin(theta_inc)])
 v_in /= np.linalg.norm(v_in)
 
 # Place starting point 10 radii away along reverse direction
 ray_start_base = -10.0 * a * v_in
 
-# Scattering angle binning parameters
-theta_min = 0.0      # degrees
-theta_max = 180.0    # degrees
-d_theta = 0.5       # bin width in degrees
-num_bins = int((theta_max - theta_min) / d_theta) + 1
-angles = np.linspace(theta_min, theta_max, num_bins)
+angles = np.linspace(0, 180, 721)  # 0.25° resolution
 phase_counts = np.zeros_like(angles, dtype=float)
 
-N_orient = 5000
+N_orient = 2000
 rng = np.random.default_rng(1)
-
-total_exit_rays = 0
 
 for _ in range(N_orient):
     # Randomly rotate the crystal
@@ -256,20 +252,15 @@ for _ in range(N_orient):
     sides_rot = build_sides(verts_rot)
 
     exit_rays = trace_one_orientation(sides_rot, v_in, ray_start_base,
-                                      max_depth=4, weight_cut=1e-6)
-
-    total_exit_rays += len(exit_rays)
+                                      max_depth=6, weight_cut=1e-4)
 
     # Convert each exit ray to scattering angle, accumulate weight
     for v_out, w in exit_rays:
-        cos_theta = np.dot(v_in, v_out)
+        cos_theta = -np.dot(v_in, v_out)
         cos_theta = np.clip(cos_theta, -1.0, 1.0)
         theta = np.rad2deg(np.arccos(cos_theta))
         idx = np.argmin(np.abs(angles - theta))
         phase_counts[idx] += w
-
-print(f"Total exit rays: {total_exit_rays}")
-print(f"Phase counts sum: {phase_counts.sum()}")
 
 # Normalize phase function to unit integral (approx via sum)
 if phase_counts.sum() > 0:
@@ -278,21 +269,28 @@ else:
     phase = phase_counts
 
 # ------------------------------------------------------------
-# 7. Plot phase function (log scale only)
+# 7. Plot phase function (linear and log)
 # ------------------------------------------------------------
-fig, ax = plt.subplots(1, 1, figsize=(8,5))
+fig, ax = plt.subplots(1, 2, figsize=(12,4), sharex=True)
+
+# linear scale
+ax[0].plot(angles, phase, drawstyle='steps-mid')
+ax[0].set_xlabel('Scattering angle θ (degrees)')
+ax[0].set_ylabel('Phase function P(θ)')
+ax[0].set_title('Hexagonal ice crystal phase function\n(geometric optics, linear scale)')
+ax[0].grid(True)
+ax[0].set_xlim(0, 180)
 
 # log scale (avoid zeros)
 phase_log = np.copy(phase)
 phase_log[phase_log <= 0] = 1e-12
-ax.plot(angles, phase_log, drawstyle='steps-mid')
-ax.set_yscale('log')
-ax.set_xlabel('Scattering angle θ (degrees)')
-ax.set_ylabel('P(θ) (log scale)')
-ax.set_title('Hexagonal ice crystal phase function\n(geometric optics, log scale)')
-ax.grid(True, which='both')
-ax.set_xlim(0, 180)
+ax[1].plot(angles, phase_log, drawstyle='steps-mid')
+ax[1].set_yscale('log')
+ax[1].set_xlabel('Scattering angle θ (degrees)')
+ax[1].set_ylabel('P(θ) (log scale)')
+ax[1].set_title('Same phase function (log scale)')
+ax[1].grid(True, which='both')
+ax[1].set_xlim(0, 180)
 
 plt.tight_layout()
-#plt.savefig('phase_function.png')
 plt.show()
