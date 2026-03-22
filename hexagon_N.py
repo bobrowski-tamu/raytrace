@@ -36,6 +36,8 @@ verts_base = np.array([
     [ a/2, -np.sqrt(3)*a/2]
 ])
 
+#Hexagon using different Methodology:
+
 def build_sides(verts):
     """Return list of sides as (p1, p2, n_out) where n_out is outward unit normal."""
     sides = []
