@@ -263,9 +263,9 @@ plt.savefig('sphere_DOLP.png', dpi=150)
 
 # Plot geometric optics phase alone
 plt.figure(figsize=(8, 5))
-plt.semilogy(theta_deg, phase + 1e-30, 'b-', linewidth=2)
+plt.semilogy(theta_deg, phase + 1e-30)
 plt.xlabel("Scattering angle (deg)")
-plt.ylabel("Phase function P(theta)")
+plt.ylabel("Phase function P($\Theta$)")
 plt.title(f"Sphere phase function (geometric optics), m=1.33, x={x:.0f}")
 plt.grid(True, alpha=0.3)
 plt.tight_layout()
