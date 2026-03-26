@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.integrate import trapezoid 
 
 m_ice = 1.31
 x = 500.0                    # Size parameter
@@ -7,11 +8,7 @@ lam = 0.55e-6               # Wavelength (m)
 a = x * lam / (2 * np.pi)   # Hexagon radius
 
 n_rays = 1000             # Rays per orientation
-<<<<<<< HEAD
 n_orientations = 10000      # Number of orientations (0-360°)
-=======
-n_orientations = 1000        # Number of orientations (0-360°)
->>>>>>> f4fec4f709ea6522ee0760d6516a846d38c0a3cf
 max_depth = 12              # Max internal reflections
 weight_cut = 1e-8         # Weight cutoff threshold
 
@@ -20,27 +17,22 @@ n_bins = int(round(180.0 / scatter_bin_deg))
 
 
 def hexagon_vertices(a=1.0, rotation=0.0):
-    """Create regular hexagon vertices."""
     angles = np.linspace(0, 2*np.pi, 7)[:-1] + rotation
     return np.stack((a*np.cos(angles), a*np.sin(angles)), axis=1)
 
 def rotate_pts(pts, th):
-    """Rotate points by angle th."""
     c, s = np.cos(th), np.sin(th)
     return pts @ np.array([[c, -s], [s, c]]).T
 
 def norm(v):
-    """Normalize vector."""
     n = np.linalg.norm(v)
     return v if n == 0.0 else v / n
 
 def scatter_deg(v, inc=np.array([1.0, 0.0])):
-    """Compute scattering angle in degrees."""
     c = np.clip(np.dot(norm(v), norm(inc)), -1.0, 1.0)
     return np.degrees(np.arccos(c))
 
 def intersect_ray_segment(ray_p, ray_v, p1, p2):
-    """Find ray-segment intersection (simplified)."""
     v1 = ray_p - p1
     v2 = p2 - p1
     v3 = np.array([-ray_v[1], ray_v[0]])
@@ -54,7 +46,6 @@ def intersect_ray_segment(ray_p, ray_v, p1, p2):
     return None, None
 
 def first_hit(pos, d, verts):
-    """Find nearest intersection with hexagon."""
     best_t = np.inf
     best_n = None
     for i in range(len(verts)):
@@ -68,7 +59,6 @@ def first_hit(pos, d, verts):
     return best_n
 
 def fresnel_sp(d, n, n1, n2):
-    """Fresnel coefficients for s and p polarization."""
     ci = np.clip(-np.dot(n, d), -1.0, 1.0)
     η = n1 / n2
     st2 = η * η * max(0.0, 1.0 - ci * ci)
@@ -86,7 +76,6 @@ def fresnel_sp(d, n, n1, n2):
     return Rs, Rp, 1.0 - Rs, 1.0 - Rp
 
 def refract(d, n, n1, n2):
-    """Compute refracted ray direction."""
     Rs, Rp, Ts, Tp = fresnel_sp(d, n, n1, n2)
     η = n1 / n2
     ci = -np.dot(n, d)
@@ -97,12 +86,10 @@ def refract(d, n, n1, n2):
     return v_trans, False, Rs, Rp, Ts, Tp
 
 def reflect(v, n):
-    """Compute reflected ray direction."""
     return norm(v - 2.0*np.dot(v, n)*n)
 
 #Ray Tracing 
 def trace_orientation_batch(verts, n_rays, max_depth, weight_cut):
-    """Trace all rays for a given orientation using pool-based tracing."""
     y0, y1 = np.min(verts[:, 1]), np.max(verts[:, 1])
     if y1 <= y0:
         return []
@@ -162,7 +149,6 @@ def trace_orientation_batch(verts, n_rays, max_depth, weight_cut):
 
 
 def diffraction(theta, chi=500):
-    """Compute diffraction contribution using numerical integration."""
     result = np.zeros_like(theta)
     
     alphas = np.linspace(0, np.pi/6, 500)
@@ -218,7 +204,7 @@ phase_corrected = phase * n_orientations / h.sum()
 # Diffraction contribution
 phase_diff = diffraction(theta_rad)
 # Normalize by integrating over the full radian range [0, π]
-integral = np.trapz(phase_diff, theta_rad)
+integral = trapezoid(phase_diff, theta_rad)
 if integral > 0:
     phase_diff = phase_diff / integral
 phase_combined = 0.5 * phase_corrected + 0.5 * phase_diff
