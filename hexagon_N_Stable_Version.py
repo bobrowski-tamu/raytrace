@@ -8,7 +8,7 @@ lam = 0.55e-6               # Wavelength (m)
 a = x * lam / (2 * np.pi)   # Hexagon radius
 
 n_rays = 1000             # Rays per orientation
-n_orientations = 360       # Number of orientations (0-360°)
+n_orientations = 10000      # Number of orientations (0-360°)
 max_depth = 12              # Max internal reflections
 weight_cut = 1e-8         # Weight cutoff threshold
 
@@ -246,7 +246,7 @@ ax.legend()
 # DoLP
 ax = axes[1]
 ax.plot(angles, dolp, 'g-', linewidth=2)
-ax.set_xlabel('Scattering angle (degrees)')
+ax.set_xlabel('(Scattering angle) (°)')
 ax.set_ylabel('$P_{12}$/P$_{11}$ (')
 ax.set_title('Degree of Linear Polarization')
 ax.grid(True, alpha=0.3)
