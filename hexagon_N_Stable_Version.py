@@ -10,7 +10,7 @@ lam = 0.55e-6               # Wavelength (m)
 a = x * lam / (2 * np.pi)   # Hexagon radius
 
 n_rays = 1000             # Rays per orientation
-n_orientations = 10000        # Number of orientations (0-360°)
+n_orientations = 1000        # Number of orientations (0-360°)
 max_depth = 12              # Max internal reflections
 weight_cut = 1e-8         # Weight cutoff threshold
 
