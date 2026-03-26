@@ -1,6 +1,5 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.integrate import trapezoid
 
 m_ice = 1.31
 x = 500.0                    # Size parameter
@@ -8,7 +7,11 @@ lam = 0.55e-6               # Wavelength (m)
 a = x * lam / (2 * np.pi)   # Hexagon radius
 
 n_rays = 1000             # Rays per orientation
+<<<<<<< HEAD
 n_orientations = 10000      # Number of orientations (0-360°)
+=======
+n_orientations = 1000        # Number of orientations (0-360°)
+>>>>>>> f4fec4f709ea6522ee0760d6516a846d38c0a3cf
 max_depth = 12              # Max internal reflections
 weight_cut = 1e-8         # Weight cutoff threshold
 
@@ -215,7 +218,7 @@ phase_corrected = phase * n_orientations / h.sum()
 # Diffraction contribution
 phase_diff = diffraction(theta_rad)
 # Normalize by integrating over the full radian range [0, π]
-integral = trapezoid(phase_diff, theta_rad)
+integral = np.trapz(phase_diff, theta_rad)
 if integral > 0:
     phase_diff = phase_diff / integral
 phase_combined = 0.5 * phase_corrected + 0.5 * phase_diff

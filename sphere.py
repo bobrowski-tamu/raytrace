@@ -16,8 +16,7 @@ def reflect(k, n):
 
 def refract(k, n, n1, n2):
     """
-    Refract ray k through interface with outward normal n.
-    Returns transmitted unit vector, or None for total internal reflection.
+    Refracts ray k through interface with normal n. Returns transmitted unit vector
     """
     k = normalize(k)
     n = normalize(n)
@@ -39,8 +38,7 @@ def refract(k, n, n1, n2):
 
 def fresnel_coefficients(n1, n2, cos_i):
     """
-    Fresnel coefficients for s and p polarization.
-    Returns Rs, Rp, Ts, Tp
+    Fresnel coefficients for s and p polarization. Returns Rs, Rp, Ts, Tp
     """
     cos_i = abs(np.clip(cos_i, -1.0, 1.0))
     sin2_i = max(0.0, 1.0 - cos_i**2)
@@ -90,8 +88,7 @@ def next_sphere_intersection(P, k, radius=1.0, eps=1e-10):
 
 def trace_one_ray(b, m=1.33, p_max=8):
     """
-    Trace one ray with impact parameter b (0 <= b < 1).
-    Returns [(theta, Is, Ip), ...]
+    Trace one ray with impact parameter b (0 <= b < 1). Returns [(theta, Is, Ip), ...]
     """
     if not (0.0 <= b < 1.0):
         return []
@@ -159,7 +156,7 @@ def trace_one_ray(b, m=1.33, p_max=8):
 
 def compute_diffraction_phase(theta, x=500.0, n_bins=720):
     """
-    Compute diffractrion
+    Computes diffractrion
     """
     # Handle theta = 0 specially (avoid division by zero)
     phase_diff = np.zeros_like(theta)
@@ -253,22 +250,22 @@ theta_deg = np.degrees(theta)
 # Plot DoLP
 plt.figure(figsize=(8, 5))
 plt.plot(theta_deg, dolp)
-plt.xlabel("Scattering angle (deg)")
-plt.ylabel("Degree of linear polarization (DOLP)")
-plt.title(f"DoLP for sphere (geometric optics), m=1.33, x={x:.0f}")
+plt.xlabel("Scattering angle ($^\circ$)")
+plt.ylabel("DOLP (P$_{11}/P_{12}$)")
+plt.title(f"DoLP for sphere, m=1.33, x={x:.0f}")
 plt.ylim(-1.05, 1.05)
 plt.grid(True, alpha=0.3)
 plt.tight_layout()
-plt.savefig('sphere_DOLP.png', dpi=150)
+plt.savefig('sphere_DOLP.png', dpi=300)
 
 # Plot geometric optics phase alone
 plt.figure(figsize=(8, 5))
 plt.semilogy(theta_deg, phase + 1e-30)
-plt.xlabel("Scattering angle (deg)")
-plt.ylabel("Phase function P($\Theta$)")
-plt.title(f"Sphere phase function (geometric optics), m=1.33, x={x:.0f}")
-plt.grid(True, alpha=0.3)
+plt.xlabel("Scattering angle ($^\circ$)")
+plt.ylabel("Phase function P$_{11}$[$\Theta$]")
+plt.title(f"Sphere phase function, m=1.33, x={x:.0f}")
+plt.grid(True, which="both", alpha=0.3)
 plt.tight_layout()
-plt.savefig('sphere_phase_function.png', dpi=150)
+plt.savefig('sphere_phase_function.png', dpi=300)
 
 plt.show()
