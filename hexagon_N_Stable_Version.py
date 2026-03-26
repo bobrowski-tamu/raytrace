@@ -1,25 +1,20 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-# ============================================================
-# Parameters 
-# ============================================================
 m_ice = 1.31
 x = 500.0                    # Size parameter
 lam = 0.55e-6               # Wavelength (m)
 a = x * lam / (2 * np.pi)   # Hexagon radius
 
 n_rays = 1000             # Rays per orientation
-n_orientations = 10000        # Number of orientations (0-360°)
+n_orientations = 1000        # Number of orientations (0-360°)
 max_depth = 12              # Max internal reflections
 weight_cut = 1e-8         # Weight cutoff threshold
 
 scatter_bin_deg = 1.0     # Scattering angle bin width
 n_bins = int(round(180.0 / scatter_bin_deg))
 
-# ============================================================
-# Geometry
-# ============================================================
+
 def hexagon_vertices(a=1.0, rotation=0.0):
     """Create regular hexagon vertices."""
     angles = np.linspace(0, 2*np.pi, 7)[:-1] + rotation
@@ -40,9 +35,6 @@ def scatter_deg(v, inc=np.array([1.0, 0.0])):
     c = np.clip(np.dot(norm(v), norm(inc)), -1.0, 1.0)
     return np.degrees(np.arccos(c))
 
-# ============================================================
-# Ray-Geometry Intersection
-# ============================================================
 def intersect_ray_segment(ray_p, ray_v, p1, p2):
     """Find ray-segment intersection (simplified)."""
     v1 = ray_p - p1
@@ -71,9 +63,6 @@ def first_hit(pos, d, verts):
             best_n = (pos + t * d, n_out)
     return best_n
 
-# ============================================================
-# Fresnel & Refraction 
-# ============================================================
 def fresnel_sp(d, n, n1, n2):
     """Fresnel coefficients for s and p polarization."""
     ci = np.clip(-np.dot(n, d), -1.0, 1.0)
@@ -107,9 +96,7 @@ def reflect(v, n):
     """Compute reflected ray direction."""
     return norm(v - 2.0*np.dot(v, n)*n)
 
-# ============================================================
-# Batch Ray Tracing 
-# ============================================================
+#Ray Tracing 
 def trace_orientation_batch(verts, n_rays, max_depth, weight_cut):
     """Trace all rays for a given orientation using pool-based tracing."""
     y0, y1 = np.min(verts[:, 1]), np.max(verts[:, 1])
@@ -169,9 +156,7 @@ def trace_orientation_batch(verts, n_rays, max_depth, weight_cut):
     
     return out
 
-# ============================================================
-# Diffraction (numerical integration, no scipy)
-# ============================================================
+
 def diffraction(theta, chi=500):
     """Compute diffraction contribution using numerical integration."""
     result = np.zeros_like(theta)
@@ -190,9 +175,7 @@ def diffraction(theta, chi=500):
     
     return result
 
-# ============================================================
-# Simulation
-# ============================================================
+
 hs = np.zeros(n_bins)
 hp = np.zeros(n_bins)
 
@@ -225,7 +208,6 @@ print(f"Total intensity: {h.sum():.6f}")
 print(f"hs sum: {hs.sum():.6f}, hp sum: {hp.sum():.6f}")
 
 # Normalize: P_ag = (ΔF_j / Δθ_j) / Σ F_i
-# Then correct for ray-splitting over-counting
 phase = (h / scatter_bin_deg) / h.sum()
 phase_corrected = phase * n_orientations / h.sum()
 
@@ -236,7 +218,6 @@ integral = np.trapz(phase_diff, theta_rad)
 if integral > 0:
     phase_diff = phase_diff / integral
 phase_combined = 0.5 * phase_corrected + 0.5 * phase_diff
-# If you want 100% ray only, use: phase_combined = phase_corrected
 
 # Calculate DoLP: -(P_parallel - P_perpendicular) / (P_perp + P_parallel)
 dolp = np.zeros_like(h)
@@ -254,7 +235,7 @@ phase_log = np.copy(phase_combined)
 phase_log[phase_log <= 0] = 1e-12
 ax.plot(angles, phase_log, color='#1f4788', linewidth=2, label='Ray + Diffraction')
 ax.set_yscale('log')
-ax.set_xlabel('Scattering angle (degrees)')
+ax.set_xlabel('P$$_11$$ (Scattering angle) [°]')
 ax.set_ylabel('Phase function (log scale)')
 ax.set_title('Phase Function - Hexagonal Crystal')
 ax.grid(True, which='both', alpha=0.3)
@@ -266,7 +247,7 @@ ax = axes[1]
 ax.plot(angles, dolp, 'g-', linewidth=2)
 ax.set_xlabel('Scattering angle (degrees)')
 ax.set_ylabel('DoLP')
-ax.set_title('Degree of Linear Polarization')
+ax.set_title('-P$_{12}$/P$_{11}$ (Degree of Linear Polarization)')
 ax.grid(True, alpha=0.3)
 ax.set_xlim(0, 180)
 ax.set_ylim(-1.0, 1.0)
