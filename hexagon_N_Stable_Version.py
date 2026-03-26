@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.integrate import trapezoid
 
 m_ice = 1.31
 x = 500.0                    # Size parameter
@@ -214,7 +215,7 @@ phase_corrected = phase * n_orientations / h.sum()
 # Diffraction contribution
 phase_diff = diffraction(theta_rad)
 # Normalize by integrating over the full radian range [0, π]
-integral = np.trapz(phase_diff, theta_rad)
+integral = trapezoid(phase_diff, theta_rad)
 if integral > 0:
     phase_diff = phase_diff / integral
 phase_combined = 0.5 * phase_corrected + 0.5 * phase_diff
