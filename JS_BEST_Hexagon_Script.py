@@ -1,4 +1,3 @@
-
 import numpy as np
 import matplotlib.pyplot as plt
 import time
@@ -16,7 +15,6 @@ max_bounces = 10        # Maximum internal reflections
 def create_hexagon(a=1.0, alpha=0.0):
     """
     Create hexagon vertices and outward-pointing unit normals.
-    alpha: rotation angle in radians
     Returns: vertices (6x2), normals (6x2)
     """
     # Rotation matrix
@@ -53,8 +51,6 @@ def create_hexagon(a=1.0, alpha=0.0):
 def ray_line_intersection(ray_origin, ray_dir, p1, p2, normal):
     """
     Find intersection of ray with line segment using parametric equations.
-    Ray: P = ray_origin + t * ray_dir
-    Line: (P - p1) · normal = 0
     """
     denom = np.dot(ray_dir, normal)
     if abs(denom) < 1e-12:
@@ -231,7 +227,6 @@ def enter_crystal(origin, direction, vertices, normals, n_out=1.0, n_in=1.31):
     rays_out = []
     
     # External reflection (doesn't enter crystal)
-    # Usually small, can be ignored or included
     
     # Refracted ray enters crystal
     if cos_t is not None:
@@ -380,8 +375,6 @@ def smooth(y, window=5):
 
 P_smooth = smooth(P_total, window=7)
 
-#%%
-
 # PLOTTING
 theta_deg = np.degrees(theta)
 
@@ -395,8 +388,6 @@ ax.set_xlim(0, 180)
 ax.set_xlabel('Scattering Angle [°]', fontsize=12)
 ax.set_ylabel('Phase Function (P11)', fontsize=12)
 ax.set_title('2D Hexagonal Ice Crystal Phase Function', fontsize=14)
-#ax.axvline(x=22, color='g', linestyle='--', alpha=0.5, label='22° halo')
-#ax.axvline(x=46, color='orange', linestyle='--', alpha=0.5, label='46° halo')
 ax.legend()
 ax.grid(True, which='both', alpha=0.3)
 plt.tight_layout()
