@@ -8,7 +8,7 @@ start = time.perf_counter()
 m = 1.31                # Refractive index of ice
 num_rays = 2000         # Number of parallel rays
 num_angles = 720        # Angular resolution (bins)
-num_rot = 500           # Number of rotation steps (0 to 30 degrees)
+num_rot = 1000           # Number of rotation steps (0 to 30 degrees)
 max_bounces = 10        # Maximum internal reflections
 
 # HEXAGON GEOMETRY WITH OUTWARD NORMALS
