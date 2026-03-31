@@ -221,9 +221,7 @@ def enter_crystal(origin, direction, vertices, normals, n_out=1.0, n_in=1.31):
     cos_i = abs(np.dot(direction, n))
     Rs, Rp, cos_t = fresnel_coefficients(cos_i, n_out, n_in)
     
-    rays_out = []
-    
-    # External reflection (doesn't enter crystal)
+    rays_out = []    
     
     # Refracted ray enters crystal
     if cos_t is not None:
@@ -400,3 +398,5 @@ ax.set_ylabel('Degree of Linear Polarization (-P12/P11)', fontsize=12)
 ax.set_title('Polarization', fontsize=14)
 ax.grid(True, which='both', alpha=0.3)
 ax.axhline(y=0, color='k', linestyle='--', alpha=1)
+plt.tight_layout()
+plt.show()
