@@ -15,6 +15,7 @@ max_bounces = 10        # Maximum internal reflections
 def create_hexagon(a=1.0, alpha=0.0):
     """
     Create hexagon vertices and outward-pointing unit normals.
+    alpha: rotation angle in radians
     Returns: vertices (6x2), normals (6x2)
     """
     # Rotation matrix
@@ -74,10 +75,6 @@ def ray_line_intersection(ray_origin, ray_dir, p1, p2, normal):
 
 # FRESNEL COEFFICIENTS (2D: TE and TM polarizations)
 def fresnel_coefficients(cos_i, n1, n2):
-    """
-    Calculate Fresnel reflection coefficients for s and p polarizations.
-    Returns: Rs, Rp, cos_t (None if TIR)
-    """
     cos_i = abs(cos_i)
     sin_i2 = 1 - cos_i**2
     sin_t2 = (n1/n2)**2 * sin_i2
